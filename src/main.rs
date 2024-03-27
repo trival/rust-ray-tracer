@@ -108,7 +108,7 @@ impl Image {
 	fn to_ppm(&self) -> String {
 		let mut ppm = format!("P3\n{} {}\n255\n", self.width, self.height);
 
-		for color in self.data.iter() {
+		for color in &self.data {
 			let r = (color.x * 255.0).round() as u8;
 			let g = (color.y * 255.0).round() as u8;
 			let b = (color.z * 255.0).round() as u8;
@@ -161,13 +161,13 @@ fn ray_color(ray: &Ray, scene: &Scene, depth: usize) -> Vec3 {
 		}
 
 		let scattered = Ray::new(ray.at(t), scatter_dir);
-		obj.color * ray_color(&scattered, scene, depth - 1)
-	} else {
-		let t = 0.5 * (ray.dir.y + 1.);
-		let col1 = Vec3::ONE;
-		let col2 = vec3(0.5, 0.7, 1.);
-		col1.lerp(col2, t)
+		return obj.color * ray_color(&scattered, scene, depth - 1);
 	}
+
+	let t = 0.5 * (ray.dir.y + 1.);
+	let col1 = Vec3::ONE;
+	let col2 = vec3(0.5, 0.7, 1.);
+	col1.lerp(col2, t)
 }
 
 struct Camera {
@@ -216,10 +216,8 @@ impl Camera {
 				let mut color = Vec3::ZERO;
 				for _ in 0..rays_per_pixel {
 					let pixel_x = -0.5 + x as f64 * pixel_width + random::<f64>() * pixel_width;
-					let pixel_y =
-						-height / 2. + y as f64 * pixel_height + random::<f64>() * pixel_height;
-					let ray_dir =
-						viewport_center + viewport_u * pixel_x + viewport_v * pixel_y - self.origin;
+					let pixel_y = -height / 2. + y as f64 * pixel_height + random::<f64>() * pixel_height;
+					let ray_dir = viewport_center + viewport_u * pixel_x + viewport_v * pixel_y - self.origin;
 					let ray = Ray::new(self.origin, ray_dir);
 					color += ray_color(&ray, scene, max_bounces) / rays_per_pixel as f64;
 				}
