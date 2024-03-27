@@ -3,5 +3,7 @@
 to compile and run
 
 ```bash
-cargo run --release > output.ppm
+cargo run --release > out/output.ppm
+# or with timing
+time cargo run --release > out/output.ppm
 ```
