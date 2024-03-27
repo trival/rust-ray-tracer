@@ -1,64 +1,64 @@
 use extend::ext;
-use glam::{dvec3, f64::DVec3};
+use glam::{dvec3 as vec3, f64::DVec3 as Vec3};
 use rand::random;
 
 #[ext]
-impl DVec3 {
+impl Vec3 {
 	fn is_zero(&self) -> bool {
 		self.length_squared() < 0.0001
 	}
 
-	fn reflect(self, n: DVec3) -> DVec3 {
+	fn reflect(self, n: Vec3) -> Vec3 {
 		self - 2. * self.dot(n) * n
 	}
 
-	fn random() -> DVec3 {
-		dvec3(random::<f64>(), random::<f64>(), random::<f64>())
+	fn random() -> Vec3 {
+		vec3(random::<f64>(), random::<f64>(), random::<f64>())
 	}
 
-	fn random_in_unit_sphere() -> DVec3 {
+	fn random_in_unit_sphere() -> Vec3 {
 		loop {
-			let p = DVec3::random() * 2. - 1.;
+			let p = Vec3::random() * 2. - 1.;
 			if p.length_squared() < 1. {
 				return p;
 			}
 		}
 	}
 
-	fn random_unit() -> DVec3 {
-		Self::random_in_unit_sphere().normalize_or(DVec3::Z)
+	fn random_unit() -> Vec3 {
+		Self::random_in_unit_sphere().normalize_or(Vec3::Z)
 	}
 }
 
 struct Ray {
-	origin: DVec3,
-	dir: DVec3,
+	origin: Vec3,
+	dir: Vec3,
 }
 
 impl Ray {
-	fn new(origin: DVec3, dir: DVec3) -> Self {
+	fn new(origin: Vec3, dir: Vec3) -> Self {
 		Self {
 			origin,
 			dir: dir.normalize(),
 		}
 	}
 
-	fn at(&self, t: f64) -> DVec3 {
+	fn at(&self, t: f64) -> Vec3 {
 		self.origin + self.dir * t
 	}
 }
 
 struct Sphere {
-	center: DVec3,
+	center: Vec3,
 	radius: f64,
 }
 
 impl Sphere {
-	fn new(center: DVec3, radius: f64) -> Self {
+	fn new(center: Vec3, radius: f64) -> Self {
 		Self { center, radius }
 	}
 
-	fn normal_at(&self, point: DVec3) -> DVec3 {
+	fn normal_at(&self, point: Vec3) -> Vec3 {
 		(point - self.center).normalize()
 	}
 
@@ -89,7 +89,7 @@ impl Sphere {
 struct Image {
 	width: usize,
 	height: usize,
-	data: Vec<DVec3>,
+	data: Vec<Vec3>,
 }
 
 impl Image {
@@ -97,29 +97,22 @@ impl Image {
 		Self {
 			width,
 			height,
-			data: vec![DVec3::ZERO; width * height],
+			data: vec![Vec3::ZERO; width * height],
 		}
 	}
 
-	fn set_pixel(&mut self, x: usize, y: usize, color: DVec3) {
+	fn set_pixel(&mut self, x: usize, y: usize, color: Vec3) {
 		self.data[y * self.width + x] = color;
-	}
-
-	fn get_pixel(&self, x: usize, y: usize) -> DVec3 {
-		self.data[y * self.width + x]
 	}
 
 	fn to_ppm(&self) -> String {
 		let mut ppm = format!("P3\n{} {}\n255\n", self.width, self.height);
 
-		for y in 0..self.height {
-			for x in 0..self.width {
-				let color = self.get_pixel(x, y);
-				let r = (color.x * 255.0).round() as u8;
-				let g = (color.y * 255.0).round() as u8;
-				let b = (color.z * 255.0).round() as u8;
-				ppm.push_str(&format!("{} {} {}\n", r, g, b));
-			}
+		for color in self.data.iter() {
+			let r = (color.x * 255.0).round() as u8;
+			let g = (color.y * 255.0).round() as u8;
+			let b = (color.z * 255.0).round() as u8;
+			ppm.push_str(&format!("{} {} {}\n", r, g, b));
 		}
 		ppm
 	}
@@ -127,7 +120,7 @@ impl Image {
 
 struct SceneObject {
 	sphere: Sphere,
-	color: DVec3,
+	color: Vec3,
 }
 
 struct Scene {
@@ -153,16 +146,16 @@ impl Scene {
 	}
 }
 
-fn ray_color(ray: &Ray, scene: &Scene, depth: usize) -> DVec3 {
+fn ray_color(ray: &Ray, scene: &Scene, depth: usize) -> Vec3 {
 	if depth == 0 {
-		return DVec3::ZERO;
+		return Vec3::ZERO;
 	}
 
 	if let Some((obj, t)) = scene.closest_object(ray) {
 		let hit_normal = obj.sphere.normal_at(ray.at(t));
 		let reflected_ray = ray.dir.reflect(hit_normal);
 
-		let mut scatter_dir = reflected_ray + DVec3::random_unit() * 0.6;
+		let mut scatter_dir = reflected_ray + Vec3::random_unit() * 0.6;
 		if scatter_dir.is_zero() {
 			scatter_dir = reflected_ray;
 		}
@@ -171,30 +164,30 @@ fn ray_color(ray: &Ray, scene: &Scene, depth: usize) -> DVec3 {
 		obj.color * ray_color(&scattered, scene, depth - 1)
 	} else {
 		let t = 0.5 * (ray.dir.y + 1.);
-		let col1 = DVec3::ONE;
-		let col2 = dvec3(0.5, 0.7, 1.);
+		let col1 = Vec3::ONE;
+		let col2 = vec3(0.5, 0.7, 1.);
 		col1.lerp(col2, t)
 	}
 }
 
 struct Camera {
-	origin: DVec3,
-	dir: DVec3,
+	origin: Vec3,
+	dir: Vec3,
 	near: f64,
-	up: DVec3,
+	up: Vec3,
 }
 
 impl Camera {
-	fn new(origin: DVec3, dir: DVec3, near: f64) -> Self {
+	fn new(origin: Vec3, dir: Vec3, near: f64) -> Self {
 		Self {
 			origin,
 			dir,
 			near,
-			up: DVec3::Y,
+			up: Vec3::Y,
 		}
 	}
 
-	fn view_port_directions(&self) -> (DVec3, DVec3) {
+	fn view_port_directions(&self) -> (Vec3, Vec3) {
 		let u = self.dir.cross(self.up).normalize();
 		let v = self.dir.cross(u).normalize();
 		(u, v)
@@ -220,7 +213,7 @@ impl Camera {
 
 		for y in 0..img_height {
 			for x in 0..img_width {
-				let mut color = DVec3::ZERO;
+				let mut color = Vec3::ZERO;
 				for _ in 0..rays_per_pixel {
 					let pixel_x = -0.5 + x as f64 * pixel_width + random::<f64>() * pixel_width;
 					let pixel_y =
@@ -242,25 +235,25 @@ fn main() {
 	let scene = Scene {
 		objects: vec![
 			SceneObject {
-				sphere: Sphere::new(dvec3(0., 0., 0.), 0.5),
-				color: dvec3(0.8, 0.3, 0.3),
+				sphere: Sphere::new(vec3(0., 0., 0.), 0.5),
+				color: vec3(0.8, 0.3, 0.3),
 			},
 			SceneObject {
-				sphere: Sphere::new(dvec3(1., 0., 0.), 0.5),
-				color: dvec3(0.3, 0.8, 0.3),
+				sphere: Sphere::new(vec3(1., 0., 0.), 0.5),
+				color: vec3(0.3, 0.8, 0.3),
 			},
 			SceneObject {
-				sphere: Sphere::new(dvec3(-1., 0., 0.), 0.5),
-				color: dvec3(0.3, 0.3, 0.8),
+				sphere: Sphere::new(vec3(-1., 0., 0.), 0.5),
+				color: vec3(0.3, 0.3, 0.8),
 			},
 			SceneObject {
-				sphere: Sphere::new(dvec3(0., -100.5, 0.), 100.),
-				color: dvec3(0.5, 0.5, 0.5),
+				sphere: Sphere::new(vec3(0., -100.5, 0.), 100.),
+				color: vec3(0.5, 0.5, 0.5),
 			},
 		],
 	};
 
-	let cam = Camera::new(dvec3(0., 0., 3.), dvec3(0., 0., -1.), 0.7);
+	let cam = Camera::new(vec3(0., 0., 3.), vec3(0., 0., -1.), 0.7);
 	let img = cam.render(&scene, 300, 200, 200, 50);
 
 	println!("{}", img.to_ppm());
