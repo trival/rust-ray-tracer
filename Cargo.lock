@@ -97,12 +97,26 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust-ray-tracer"
+name = "raytracer"
 version = "0.1.0"
 dependencies = [
  "extend",
  "glam",
  "rand",
+]
+
+[[package]]
+name = "scene1"
+version = "0.1.0"
+dependencies = [
+ "raytracer",
+]
+
+[[package]]
+name = "scene2"
+version = "0.1.0"
+dependencies = [
+ "raytracer",
 ]
 
 [[package]]
