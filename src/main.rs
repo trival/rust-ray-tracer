@@ -1,6 +1,7 @@
 use extend::ext;
 use glam::{dvec3 as vec3, f64::DVec3 as Vec3};
 use rand::random;
+use std::thread;
 
 #[ext]
 impl Vec3 {
@@ -48,6 +49,7 @@ impl Ray {
 	}
 }
 
+#[derive(Clone, Copy)]
 struct Sphere {
 	center: Vec3,
 	radius: f64,
@@ -86,6 +88,7 @@ impl Sphere {
 	}
 }
 
+#[derive(Clone, Copy)]
 struct Quad {
 	origin: Vec3,
 	u: Vec3,
@@ -148,6 +151,10 @@ impl Image {
 		self.data[y * self.width + x] = color;
 	}
 
+	fn get_pixel(&self, x: usize, y: usize) -> Vec3 {
+		self.data[y * self.width + x]
+	}
+
 	fn to_ppm(&self) -> String {
 		let mut ppm = format!("P3\n{} {}\n255\n", self.width, self.height);
 
@@ -161,16 +168,19 @@ impl Image {
 	}
 }
 
+#[derive(Clone, Copy)]
 enum Form {
 	Sphere(Sphere),
 	Quad(Quad),
 }
 
+#[derive(Clone, Copy)]
 struct SceneObject {
 	form: Form,
 	color: Vec3,
 }
 
+#[derive(Clone)]
 struct Scene {
 	objects: Vec<SceneObject>,
 }
@@ -246,6 +256,7 @@ fn ray_color(ray: &Ray, scene: &Scene, depth: usize) -> Vec3 {
 	col1.lerp(col2, t)
 }
 
+#[derive(Clone, Copy)]
 struct Camera {
 	origin: Vec3,
 	dir: Vec3,
@@ -303,6 +314,51 @@ impl Camera {
 
 		image
 	}
+
+	fn render_parallel(
+		&self,
+		scene: &Scene,
+		img_width: usize,
+		img_height: usize,
+		rays_per_pixel: usize,
+		max_bounces: usize,
+		threads: usize,
+	) -> Image {
+		let mut handles = vec![];
+
+		for _ in 0..threads {
+			let s = scene.clone();
+			let c = self.clone();
+			handles.push(thread::spawn(move || {
+				c.render(
+					&s,
+					img_width,
+					img_height,
+					rays_per_pixel / threads,
+					max_bounces,
+				)
+			}));
+		}
+
+		let mut imgs = Vec::with_capacity(threads);
+
+		for handle in handles {
+			imgs.push(handle.join().unwrap());
+		}
+
+		for x in 0..img_width {
+			for y in 0..img_height {
+				let mut color = Vec3::ZERO;
+				for img in &imgs {
+					color += img.get_pixel(x, y);
+				}
+				color /= threads as f64;
+				imgs[threads - 1].set_pixel(x, y, color);
+			}
+		}
+
+		imgs.pop().unwrap()
+	}
 }
 
 fn main() {
@@ -310,14 +366,25 @@ fn main() {
 	scene.add_sphere(Sphere::new(Vec3::ZERO, 0.5), vec3(0.8, 0.3, 0.3));
 	scene.add_sphere(Sphere::new(vec3(1., 0., 0.), 0.5), vec3(0.3, 0.8, 0.3));
 	scene.add_sphere(Sphere::new(vec3(-1., 0., 0.), 0.5), vec3(0.3, 0.8, 0.8));
-	scene.add_sphere(Sphere::new(vec3(0., -100.5, 0.), 100.), vec3(0.5, 0.5, 0.5));
+	scene.add_sphere(Sphere::new(vec3(0., -200.5, 0.), 200.), vec3(0.5, 0.5, 0.5));
 	scene.add_quad(
-		Quad::new(vec3(-1.5, -1., -2.), vec3(2., 0., 0.), vec3(0., 3., 0.)),
+		Quad::new(vec3(-3., -1., -1.), vec3(2., 0., -3.), vec3(0., 3., 0.)),
 		vec3(0.8, 0.8, 0.3),
 	);
 
-	let cam = Camera::new(vec3(0., 0., 3.), vec3(0., 0., -1.), 0.7);
-	let img = cam.render(&scene, 300, 200, 200, 50);
+	let cam = Camera::new(vec3(0., 1.5, 4.), vec3(0., -0.3, -1.), 0.7);
+
+	let width = 600;
+	let height = 400;
+	let rays_per_pixel = 200;
+	let max_bounces = 50;
+	let threads = 8;
+
+	let img = if threads <= 1 {
+		cam.render(&scene, width, height, rays_per_pixel, max_bounces)
+	} else {
+		cam.render_parallel(&scene, width, height, rays_per_pixel, max_bounces, threads)
+	};
 
 	println!("{}", img.to_ppm());
 }
