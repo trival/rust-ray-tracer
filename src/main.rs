@@ -86,6 +86,49 @@ impl Sphere {
 	}
 }
 
+struct Quad {
+	origin: Vec3,
+	u: Vec3,
+	v: Vec3,
+
+	// cached normal
+	normal: Vec3,
+	d: f64,
+	w: Vec3,
+}
+
+impl Quad {
+	fn new(origin: Vec3, u: Vec3, v: Vec3) -> Self {
+		let n = u.cross(v);
+		let normal = n.normalize();
+		let w = n / n.length_squared();
+		Self {
+			origin,
+			u,
+			v,
+			normal,
+			w,
+			d: normal.dot(origin),
+		}
+	}
+
+	fn intersect(&self, ray: &Ray) -> f64 {
+		let denom = self.normal.dot(ray.dir);
+		if denom.abs() > 1e-6 {
+			let t = (self.d - self.normal.dot(ray.origin)) / denom;
+			if t >= 0. {
+				let q = ray.at(t) - self.origin;
+				let u = self.w.dot(q.cross(self.v)); // can be reused for texture coords
+				let v = self.w.dot(self.u.cross(q)); // can be reused for texture coords
+				if u >= 0. && u <= 1. && v >= 0. && v <= 1. {
+					return t;
+				}
+			}
+		}
+		-1.
+	}
+}
+
 struct Image {
 	width: usize,
 	height: usize,
@@ -118,8 +161,13 @@ impl Image {
 	}
 }
 
+enum Form {
+	Sphere(Sphere),
+	Quad(Quad),
+}
+
 struct SceneObject {
-	sphere: Sphere,
+	form: Form,
 	color: Vec3,
 }
 
@@ -131,17 +179,42 @@ const MIN_T: f64 = 0.001;
 const MAX_T: f64 = 1.0e10;
 
 impl Scene {
+	fn new() -> Self {
+		Self {
+			objects: Vec::new(),
+		}
+	}
+
+	fn add_sphere(&mut self, sphere: Sphere, color: Vec3) {
+		self.objects.push(SceneObject {
+			form: Form::Sphere(sphere),
+			color,
+		});
+	}
+
+	fn add_quad(&mut self, quad: Quad, color: Vec3) {
+		self.objects.push(SceneObject {
+			form: Form::Quad(quad),
+			color,
+		});
+	}
+
 	fn closest_object(&self, ray: &Ray) -> Option<(&SceneObject, f64)> {
 		let mut closest_t = MAX_T;
 		let mut closest_object = None;
 
 		for object in &self.objects {
-			let t = object.sphere.intersect(ray);
+			let t = match object.form {
+				Form::Sphere(ref sphere) => sphere.intersect(ray),
+				Form::Quad(ref quad) => quad.intersect(ray),
+			};
+
 			if t > MIN_T && t < closest_t {
 				closest_t = t;
 				closest_object = Some(object);
 			}
 		}
+
 		closest_object.map(|obj| (obj, closest_t))
 	}
 }
@@ -152,7 +225,10 @@ fn ray_color(ray: &Ray, scene: &Scene, depth: usize) -> Vec3 {
 	}
 
 	if let Some((obj, t)) = scene.closest_object(ray) {
-		let hit_normal = obj.sphere.normal_at(ray.at(t));
+		let hit_normal = match obj.form {
+			Form::Sphere(ref sphere) => sphere.normal_at(ray.at(t)),
+			Form::Quad(ref quad) => quad.normal,
+		};
 		let reflected_ray = ray.dir.reflect(hit_normal);
 
 		let mut scatter_dir = reflected_ray + Vec3::random_unit() * 0.6;
@@ -230,26 +306,15 @@ impl Camera {
 }
 
 fn main() {
-	let scene = Scene {
-		objects: vec![
-			SceneObject {
-				sphere: Sphere::new(vec3(0., 0., 0.), 0.5),
-				color: vec3(0.8, 0.3, 0.3),
-			},
-			SceneObject {
-				sphere: Sphere::new(vec3(1., 0., 0.), 0.5),
-				color: vec3(0.3, 0.8, 0.3),
-			},
-			SceneObject {
-				sphere: Sphere::new(vec3(-1., 0., 0.), 0.5),
-				color: vec3(0.3, 0.3, 0.8),
-			},
-			SceneObject {
-				sphere: Sphere::new(vec3(0., -100.5, 0.), 100.),
-				color: vec3(0.5, 0.5, 0.5),
-			},
-		],
-	};
+	let mut scene = Scene::new();
+	scene.add_sphere(Sphere::new(Vec3::ZERO, 0.5), vec3(0.8, 0.3, 0.3));
+	scene.add_sphere(Sphere::new(vec3(1., 0., 0.), 0.5), vec3(0.3, 0.8, 0.3));
+	scene.add_sphere(Sphere::new(vec3(-1., 0., 0.), 0.5), vec3(0.3, 0.8, 0.8));
+	scene.add_sphere(Sphere::new(vec3(0., -100.5, 0.), 100.), vec3(0.5, 0.5, 0.5));
+	scene.add_quad(
+		Quad::new(vec3(-1.5, -1., -2.), vec3(2., 0., 0.), vec3(0., 3., 0.)),
+		vec3(0.8, 0.8, 0.3),
+	);
 
 	let cam = Camera::new(vec3(0., 0., 3.), vec3(0., 0., -1.), 0.7);
 	let img = cam.render(&scene, 300, 200, 200, 50);
