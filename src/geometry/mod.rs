@@ -1,3 +1,5 @@
+use std::f64::consts::PI;
+
 use crate::math_utils::*;
 
 pub struct Ray {
@@ -228,31 +230,31 @@ impl Box {
 			center + vec3(0., 0., -half_depth),
 			width,
 			height,
-			Quat::from_rotation_z(std::f64::consts::PI),
+			Quat::from_rotation_z(PI),
 		);
 		let left = Quad::new(
 			center + vec3(-half_width, 0., 0.),
 			depth,
 			height,
-			Quat::from_rotation_z(std::f64::consts::PI / 2.),
+			Quat::from_rotation_y(PI / 2.),
 		);
 		let right = Quad::new(
 			center + vec3(half_width, 0., 0.),
 			depth,
 			height,
-			Quat::from_rotation_z(-std::f64::consts::PI / 2.),
+			Quat::from_rotation_y(-PI / 2.),
 		);
 		let top = Quad::new(
 			center + vec3(0., half_height, 0.),
 			width,
 			depth,
-			Quat::from_rotation_x(-std::f64::consts::PI / 2.),
+			Quat::from_rotation_x(-PI / 2.),
 		);
 		let bottom = Quad::new(
 			center + vec3(0., -half_height, 0.),
 			width,
 			depth,
-			Quat::from_rotation_x(std::f64::consts::PI / 2.),
+			Quat::from_rotation_x(PI / 2.),
 		);
 
 		Self {

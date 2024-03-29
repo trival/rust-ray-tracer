@@ -9,6 +9,7 @@ pub trait Vec3Utils {
 	fn random() -> Vec3;
 	fn random_in_unit_sphere() -> Vec3;
 	fn random_unit() -> Vec3;
+	fn pow(self, e: f64) -> Vec3;
 }
 
 impl Vec3Utils for Vec3 {
@@ -35,5 +36,9 @@ impl Vec3Utils for Vec3 {
 
 	fn random_unit() -> Vec3 {
 		Self::random_in_unit_sphere().normalize_or(Vec3::Z)
+	}
+
+	fn pow(self, e: f64) -> Vec3 {
+		vec3(self.x.powf(e), self.y.powf(e), self.z.powf(e))
 	}
 }
