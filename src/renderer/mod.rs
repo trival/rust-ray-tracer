@@ -150,6 +150,9 @@ impl Camera {
 					let ray = Ray::new(self.origin, ray_dir);
 					color += ray_color(&ray, scene, max_bounces) / rays_per_pixel as f64;
 				}
+				color.x = color.x.powf(0.8);
+				color.y = color.y.powf(0.8);
+				color.z = color.z.powf(0.8);
 				image.set_pixel(x, y, color);
 			}
 		}

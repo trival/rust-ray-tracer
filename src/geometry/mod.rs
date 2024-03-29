@@ -133,15 +133,15 @@ impl Quad {
 		Self::new_uv(center - u / 2. - v / 2., u, v)
 	}
 
+	pub fn new_wh(width: f64, height: f64) -> Self {
+		Self::new(Vec3::ZERO, width, height, Quat::IDENTITY)
+	}
+
 	pub fn new_uv(origin: Vec3, u: Vec3, v: Vec3) -> Self {
 		let n = u.cross(v);
 		let plane = Plane::new(origin, n);
 		let w = n / n.length_squared();
 		Self { plane, u, v, w }
-	}
-
-	pub fn normal(&self) -> Vec3 {
-		self.plane.normal
 	}
 
 	pub fn rotate(&mut self, rotation_origin: Vec3, rot: Quat) {
@@ -170,6 +170,16 @@ impl Quad {
 		quad.rotate_about_center(rot);
 		quad
 	}
+
+	pub fn translate(&mut self, translation: Vec3) {
+		self.plane.origin += translation;
+	}
+
+	pub fn translated(&self, translation: Vec3) -> Self {
+		let mut quad = self.clone();
+		quad.translate(translation);
+		quad
+	}
 }
 
 impl Hittable for Quad {
@@ -181,11 +191,10 @@ impl Hittable for Quad {
 			let u = self.w.dot(q.cross(self.v)); // can be reused for texture coords
 			let v = self.w.dot(self.u.cross(q)); // can be reused for texture coords
 			if u >= 0. && u <= 1. && v >= 0. && v <= 1. {
-				let normal = self.normal();
 				Some(HitData {
 					t,
 					point,
-					normal,
+					normal: self.plane.normal,
 					uv: vec2(u, v),
 				})
 			} else {
@@ -200,6 +209,7 @@ impl Hittable for Quad {
 #[derive(Clone, Copy)]
 pub struct Box {
 	quads: [Quad; 6],
+	center: Vec3,
 }
 
 impl Box {
@@ -247,7 +257,69 @@ impl Box {
 
 		Self {
 			quads: [front, back, left, right, top, bottom],
+			center,
 		}
+	}
+
+	pub fn front(&self) -> &Quad {
+		&self.quads[0]
+	}
+
+	pub fn back(&self) -> &Quad {
+		&self.quads[1]
+	}
+
+	pub fn left(&self) -> &Quad {
+		&self.quads[2]
+	}
+
+	pub fn right(&self) -> &Quad {
+		&self.quads[3]
+	}
+
+	pub fn top(&self) -> &Quad {
+		&self.quads[4]
+	}
+
+	pub fn bottom(&self) -> &Quad {
+		&self.quads[5]
+	}
+
+	pub fn rotate(&mut self, rotation_origin: Vec3, rot: Quat) {
+		for quad in self.quads.iter_mut() {
+			quad.rotate(rotation_origin, rot);
+		}
+	}
+
+	pub fn rotated(&self, rotation_origin: Vec3, rot: Quat) -> Self {
+		let mut box_ = self.clone();
+		box_.rotate(rotation_origin, rot);
+		box_
+	}
+
+	pub fn rotate_about_center(&mut self, rot: Quat) {
+		for quad in self.quads.iter_mut() {
+			quad.rotate(self.center, rot);
+		}
+	}
+
+	pub fn rotated_about_center(&self, rot: Quat) -> Self {
+		let mut box_ = self.clone();
+		box_.rotate_about_center(rot);
+		box_
+	}
+
+	pub fn translate(&mut self, translation: Vec3) {
+		for quad in self.quads.iter_mut() {
+			quad.translate(translation);
+		}
+		self.center += translation;
+	}
+
+	pub fn translated(&self, translation: Vec3) -> Self {
+		let mut box_ = self.clone();
+		box_.translate(translation);
+		box_
 	}
 }
 
