@@ -2,6 +2,7 @@ use std::f64::consts::PI;
 
 use crate::math_utils::*;
 
+#[derive(Clone, Copy)]
 pub struct Ray {
 	pub origin: Vec3,
 	pub dir: Vec3,
@@ -28,7 +29,7 @@ pub struct HitData {
 	pub uv: Vec2,
 }
 
-pub trait Hittable {
+pub trait Hittable: Sync + Send {
 	fn hit(&self, ray: &Ray, min_t: f64, max_t: f64) -> Option<HitData>;
 }
 
@@ -209,12 +210,12 @@ impl Hittable for Quad {
 }
 
 #[derive(Clone, Copy)]
-pub struct Box {
+pub struct Cube {
 	quads: [Quad; 6],
 	center: Vec3,
 }
 
-impl Box {
+impl Cube {
 	pub fn new(center: Vec3, width: f64, height: f64, depth: f64) -> Self {
 		let half_width = width / 2.;
 		let half_height = height / 2.;
@@ -325,7 +326,7 @@ impl Box {
 	}
 }
 
-impl Hittable for Box {
+impl Hittable for Cube {
 	fn hit(&self, ray: &Ray, min_t: f64, max_t: f64) -> Option<HitData> {
 		let mut closest = None;
 		let mut closest_t = max_t;

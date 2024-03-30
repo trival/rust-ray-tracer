@@ -2,54 +2,45 @@ use crate::geometry::*;
 use crate::image::Image;
 use crate::math_utils::*;
 use rand::random;
+use std::sync::Arc;
 use std::thread;
 
-#[derive(Clone, Copy)]
-enum Form {
-	Sphere(Sphere),
-	Quad(Quad),
-	Box(Box),
+pub trait Material: Sync + Send {
+	fn scatter(&self, ray: &Ray, hit: &HitData) -> Option<Ray>;
+	fn emitted(&self, scattered: Option<(Ray, Vec3)>, hit: &HitData) -> Vec3;
 }
 
-#[derive(Clone, Copy)]
+pub trait Sky: Sync + Send {
+	fn shade(&self, ray: &Ray) -> Vec3;
+}
+
+#[derive(Clone)]
 struct SceneObject {
-	form: Form,
-	color: Vec3,
+	form: Arc<dyn Hittable>,
+	material: Arc<dyn Material>,
 }
 
 #[derive(Clone)]
 pub struct Scene {
 	objects: Vec<SceneObject>,
+	sky: Arc<dyn Sky>,
 }
 
 const MIN_T: f64 = 0.001;
 const MAX_T: f64 = 1.0e10;
 
 impl Scene {
-	pub fn new() -> Self {
+	pub fn new(sky: impl Sky + 'static) -> Self {
 		Self {
 			objects: Vec::new(),
+			sky: Arc::new(sky),
 		}
 	}
 
-	pub fn add_sphere(&mut self, sphere: Sphere, color: Vec3) {
+	pub fn add(&mut self, object: impl Hittable + 'static, material: impl Material + 'static) {
 		self.objects.push(SceneObject {
-			form: Form::Sphere(sphere),
-			color,
-		});
-	}
-
-	pub fn add_quad(&mut self, quad: Quad, color: Vec3) {
-		self.objects.push(SceneObject {
-			form: Form::Quad(quad),
-			color,
-		});
-	}
-
-	pub fn add_box(&mut self, _box: Box, color: Vec3) {
-		self.objects.push(SceneObject {
-			form: Form::Box(_box),
-			color,
+			form: Arc::new(object),
+			material: Arc::new(material),
 		});
 	}
 }
@@ -60,7 +51,7 @@ fn ray_color(ray: &Ray, scene: &Scene, depth: usize) -> Vec3 {
 	}
 
 	let mut closest_hit: Option<HitData> = None;
-	let mut obj_color = Vec3::ZERO;
+	let mut closest_obj: Option<&SceneObject> = None;
 
 	for object in &scene.objects {
 		let closest_t = if let Some(closest_hit) = closest_hit {
@@ -69,34 +60,45 @@ fn ray_color(ray: &Ray, scene: &Scene, depth: usize) -> Vec3 {
 			MAX_T
 		};
 
-		let hit = match object.form {
-			Form::Sphere(ref sphere) => sphere.hit(ray, MIN_T, closest_t),
-			Form::Quad(ref quad) => quad.hit(ray, MIN_T, closest_t),
-			Form::Box(ref _box) => _box.hit(ray, MIN_T, closest_t),
-		};
+		let hit = object.form.hit(ray, MIN_T, closest_t);
 		if hit.is_some() {
 			closest_hit = hit;
-			obj_color = object.color;
+			closest_obj = Some(object);
 		}
 	}
 
 	if let Some(hit) = closest_hit {
-		let reflected_ray = ray.dir.reflect(hit.normal);
+		// let reflected_ray = ray.dir.reflect(hit.normal);
 
-		let mut scatter_dir = reflected_ray + Vec3::random_unit() * 0.6;
-		if scatter_dir.is_zero() {
-			scatter_dir = reflected_ray;
-		}
+		// let mut scatter_dir = reflected_ray + Vec3::random_unit() * 0.6;
+		// if scatter_dir.is_zero() {
+		// 	scatter_dir = reflected_ray;
+		// }
 
-		let scattered = Ray::new(hit.point, scatter_dir);
-		return obj_color * ray_color(&scattered, scene, depth - 1);
+		// let scattered = Ray::new(hit.point, scatter_dir);
+		// return obj_color * ray_color(&scattered, scene, depth - 1);
+
+		let obj = closest_obj.unwrap();
+		let scattered = obj.material.scatter(ray, &hit);
+		return obj.material.emitted(
+			scattered.map(|r| (r, ray_color(&ray, scene, depth - 1))),
+			&hit,
+		);
 	}
 
-	let t = 0.5 * (ray.dir.y + 1.);
-	let col1 = Vec3::ONE;
-	let col2 = vec3(0.5, 0.7, 1.);
-	col1.lerp(col2, t)
+	scene.sky.shade(ray)
 }
+
+pub struct DefaultSky;
+impl Sky for DefaultSky {
+	fn shade(&self, ray: &Ray) -> Vec3 {
+		let t = 0.5 * (ray.dir.y + 1.);
+		let col1 = Vec3::ONE;
+		let col2 = vec3(0.5, 0.7, 1.);
+		col1.lerp(col2, t)
+	}
+}
+pub const DEFAULT_SKY: DefaultSky = DefaultSky;
 
 #[derive(Clone, Copy)]
 pub struct Camera {

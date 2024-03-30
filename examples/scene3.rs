@@ -12,7 +12,7 @@ fn main() {
 	for _ in 0..10 {
 		let w = rnd() * 4. + 2.;
 		let h = rnd() * 4. + 2.;
-		let mut b = Box::new(Vec3::ZERO, w, h, rnd() + 0.1);
+		let mut b = Cube::new(Vec3::ZERO, w, h, rnd() + 0.1);
 		b.translate(Vec3::Y * (h / 2.1));
 		b.rotate_about_center(Quat::from_rotation_y(rnd() * TAU));
 		// b.rotate_about_center(Quat::from_rotation_y(0.25 * PI));
