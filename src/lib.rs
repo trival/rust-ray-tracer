@@ -1,7 +1,13 @@
-mod geometry;
-mod image;
-mod math_utils;
-mod renderer;
+pub mod geometry;
+pub mod image;
+pub mod math_utils;
+pub mod renderer;
+
+pub mod utils {
+	pub fn to_static<T>(t: T) -> &'static T {
+		Box::leak(Box::new(t))
+	}
+}
 
 pub use geometry::*;
 pub use image::*;

@@ -2,7 +2,6 @@ use crate::geometry::*;
 use crate::image::Image;
 use crate::math_utils::*;
 use rand::random;
-use std::sync::Arc;
 use std::thread;
 
 pub trait Material: Sync + Send {
@@ -14,34 +13,26 @@ pub trait Sky: Sync + Send {
 	fn shade(&self, ray: &Ray) -> Vec3;
 }
 
-#[derive(Clone)]
-struct SceneObject {
-	form: Arc<dyn Hittable>,
-	material: Arc<dyn Material>,
+pub struct SceneObject {
+	form: &'static dyn Hittable,
+	material: &'static dyn Material,
 }
 
-#[derive(Clone)]
+pub fn obj(form: &'static dyn Hittable, material: &'static dyn Material) -> SceneObject {
+	SceneObject { form, material }
+}
+
 pub struct Scene {
-	objects: Vec<SceneObject>,
-	sky: Arc<dyn Sky>,
+	objects: &'static [SceneObject],
+	sky: &'static dyn Sky,
 }
 
 const MIN_T: f64 = 0.001;
 const MAX_T: f64 = 1.0e10;
 
 impl Scene {
-	pub fn new(sky: impl Sky + 'static) -> Self {
-		Self {
-			objects: Vec::new(),
-			sky: Arc::new(sky),
-		}
-	}
-
-	pub fn add(&mut self, object: impl Hittable + 'static, material: impl Material + 'static) {
-		self.objects.push(SceneObject {
-			form: Arc::new(object),
-			material: Arc::new(material),
-		});
+	pub fn new(sky: &'static impl Sky, objects: &'static [SceneObject]) -> Self {
+		Self { objects, sky }
 	}
 }
 
@@ -53,7 +44,7 @@ fn ray_color(ray: &Ray, scene: &Scene, depth: usize) -> Vec3 {
 	let mut closest_hit: Option<HitData> = None;
 	let mut closest_obj: Option<&SceneObject> = None;
 
-	for object in &scene.objects {
+	for object in scene.objects {
 		let closest_t = if let Some(closest_hit) = closest_hit {
 			closest_hit.t
 		} else {
@@ -68,20 +59,10 @@ fn ray_color(ray: &Ray, scene: &Scene, depth: usize) -> Vec3 {
 	}
 
 	if let Some(hit) = closest_hit {
-		// let reflected_ray = ray.dir.reflect(hit.normal);
-
-		// let mut scatter_dir = reflected_ray + Vec3::random_unit() * 0.6;
-		// if scatter_dir.is_zero() {
-		// 	scatter_dir = reflected_ray;
-		// }
-
-		// let scattered = Ray::new(hit.point, scatter_dir);
-		// return obj_color * ray_color(&scattered, scene, depth - 1);
-
 		let obj = closest_obj.unwrap();
 		let scattered = obj.material.scatter(ray, &hit);
 		return obj.material.emitted(
-			scattered.map(|r| (r, ray_color(&ray, scene, depth - 1))),
+			scattered.map(|r| (r, ray_color(&r, scene, depth - 1))),
 			&hit,
 		);
 	}
@@ -160,8 +141,8 @@ impl Camera {
 	}
 
 	pub fn render_parallel(
-		&self,
-		scene: &Scene,
+		&'static self,
+		scene: &'static Scene,
 		img_width: usize,
 		img_height: usize,
 		rays_per_pixel: usize,
@@ -171,11 +152,9 @@ impl Camera {
 		let mut handles = vec![];
 
 		for _ in 0..threads {
-			let s = scene.clone();
-			let c = self.clone();
 			handles.push(thread::spawn(move || {
-				c.render(
-					&s,
+				self.render(
+					scene,
 					img_width,
 					img_height,
 					rays_per_pixel / threads,

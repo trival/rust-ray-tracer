@@ -49,6 +49,10 @@ impl Sphere {
 	}
 }
 
+pub fn sphere(center: Vec3, radius: f64) -> &'static Sphere {
+	Box::leak(Box::new(Sphere { center, radius }))
+}
+
 impl Hittable for Sphere {
 	fn hit(&self, ray: &Ray, min_t: f64, max_t: f64) -> Option<HitData> {
 		let oc = ray.origin - self.center;
@@ -187,7 +191,7 @@ impl Quad {
 
 impl Hittable for Quad {
 	fn hit(&self, ray: &Ray, min_t: f64, max_t: f64) -> Option<HitData> {
-		let t = self.plane.intersect(ray);
+		let t = self.plane.intersect(&ray);
 		if t >= min_t && t < max_t {
 			let point = ray.at(t);
 			let q = point - self.plane.origin;
@@ -207,6 +211,27 @@ impl Hittable for Quad {
 			None
 		}
 	}
+}
+
+// pub fn new(center: Vec3, width: f64, height: f64, rot: Quat) -> Self {
+// 	let u = rot * Vec3::X * width;
+// 	let v = rot * Vec3::Y * height;
+// 	Self::new_uv(center - u / 2. - v / 2., u, v)
+// }
+
+// pub fn new_wh(width: f64, height: f64) -> Self {
+// 	Self::new(Vec3::ZERO, width, height, Quat::IDENTITY)
+// }
+
+// pub fn new_uv(origin: Vec3, u: Vec3, v: Vec3) -> Self {
+// 	let n = u.cross(v);
+// 	let plane = Plane::new(origin, n);
+// 	let w = n / n.length_squared();
+// 	Self { plane, u, v, w }
+// }
+
+pub fn quad_uv(origin: Vec3, u: Vec3, v: Vec3) -> &'static Quad {
+	Box::leak(Box::new(Quad::new_uv(origin, u, v)))
 }
 
 #[derive(Clone, Copy)]
