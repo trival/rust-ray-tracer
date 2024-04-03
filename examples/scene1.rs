@@ -5,16 +5,29 @@ struct Metal {
 	shininess: f64,
 }
 
+const LIGHT_POS: Vec3 = vec3(-1., 0., 0.);
+const LIGHT_RADIUS: f64 = 0.5;
+const LIGHT_DISTANCE: f64 = 15.;
+
 impl Material for Metal {
 	fn scatter(&self, ray: &Ray, hit: &HitData) -> Option<Ray> {
-		let reflected_ray = ray.dir.reflect(hit.normal);
+		let light_point = LIGHT_POS + Vec3::random_unit() * LIGHT_RADIUS;
+		let light_vec = light_point - hit.point;
+		let len = light_vec.length();
+		let light_strength = 1.0 - (len / LIGHT_DISTANCE);
 
-		let mut scatter_dir = reflected_ray + Vec3::random_unit() * self.shininess;
-		if scatter_dir.is_zero() {
-			scatter_dir = reflected_ray;
+		if rand::random::<f64>() > 0.25 * light_strength || hit.normal.dot(light_vec) < 0. {
+			let reflected_ray = ray.dir.reflect(hit.normal);
+
+			let mut scatter_dir = reflected_ray + Vec3::random_unit() * self.shininess;
+			if scatter_dir.is_zero() {
+				scatter_dir = reflected_ray;
+			}
+
+			Some(Ray::new(hit.point, scatter_dir))
+		} else {
+			Some(Ray::new(hit.point, light_vec))
 		}
-
-		Some(Ray::new(hit.point, scatter_dir))
 	}
 
 	fn emitted(&self, scattered: Option<(Ray, Vec3)>, _hit: &HitData) -> Vec3 {
@@ -51,7 +64,7 @@ fn main() {
 			sphere(vec3(1., 0., 0.), 0.5),
 			metal(vec3(0.3, 0.8, 0.3), 0.2),
 		),
-		obj(sphere(vec3(-1., 0., 0.), 0.5), light(vec3(1.9, 1.9, 3.8))),
+		obj(sphere(LIGHT_POS, LIGHT_RADIUS), light(vec3(1.9, 1.9, 3.8))),
 		obj(
 			quad_uv(vec3(-3., -1., -1.), vec3(2., 0., -2.), vec3(0., 3., 0.)),
 			metal(vec3(0.9, 0.9, 0.4), 0.05),
@@ -67,7 +80,7 @@ fn main() {
 
 	let width = 600;
 	let height = 400;
-	let rays_per_pixel = 200;
+	let rays_per_pixel = 300;
 	let max_bounces = 50;
 	let threads = 8;
 
