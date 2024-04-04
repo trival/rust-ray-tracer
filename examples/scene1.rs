@@ -30,8 +30,8 @@ impl Material for Metal {
 		}
 	}
 
-	fn emitted(&self, scattered: Option<(Ray, Vec3)>, _hit: &HitData) -> Vec3 {
-		self.color * scattered.unwrap().1
+	fn emitted(&self, scattered: Option<Vec3>, _hit: &HitData) -> Vec3 {
+		self.color * scattered.unwrap()
 	}
 }
 
@@ -46,7 +46,7 @@ impl Material for Light {
 	fn scatter(&self, _ray: &Ray, _hit: &HitData) -> Option<Ray> {
 		None
 	}
-	fn emitted(&self, _scattered: Option<(Ray, Vec3)>, _hit: &HitData) -> Vec3 {
+	fn emitted(&self, _scattered: Option<Vec3>, _hit: &HitData) -> Vec3 {
 		self.color
 	}
 }

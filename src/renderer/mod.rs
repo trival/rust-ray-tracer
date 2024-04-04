@@ -7,7 +7,7 @@ use std::thread;
 
 pub trait Material: Sync + Send {
 	fn scatter(&self, ray: &Ray, hit: &HitData) -> Option<Ray>;
-	fn emitted(&self, scattered: Option<(Ray, Vec3)>, hit: &HitData) -> Vec3;
+	fn emitted(&self, scattered_color: Option<Vec3>, hit: &HitData) -> Vec3;
 }
 
 pub trait Sky: Sync + Send {
@@ -93,10 +93,9 @@ fn ray_color(ray: &Ray, scene: &Scene, depth: usize) -> Vec3 {
 	if let Some(hit) = closest_hit {
 		let obj = closest_obj.unwrap();
 		let scattered = obj.material.scatter(ray, &hit);
-		return obj.material.emitted(
-			scattered.map(|r| (r, ray_color(&r, scene, depth - 1))),
-			&hit,
-		);
+		return obj
+			.material
+			.emitted(scattered.map(|r| ray_color(&r, scene, depth - 1)), &hit);
 	}
 
 	scene.sky.shade(ray)

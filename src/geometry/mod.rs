@@ -23,11 +23,11 @@ impl Ray {
 
 #[derive(Clone, Copy)]
 pub struct HitData {
-	pub ray: Ray,
 	pub t: f64,
 	pub point: Vec3,
 	pub normal: Vec3,
 	pub uv: Vec2,
+	pub is_front: bool,
 }
 
 pub trait Hittable: Sync + Send {
@@ -82,11 +82,11 @@ impl Hittable for Sphere {
 			let normal = self.normal_at(point);
 			let uv = Vec2::ZERO; // TODO
 			Some(HitData {
-				ray: *ray,
 				t,
 				point,
 				normal,
 				uv,
+				is_front: ray.dir.dot(normal) < 0.,
 			})
 		} else {
 			None
@@ -201,11 +201,11 @@ impl Hittable for Quad {
 			let v = self.w.dot(self.u.cross(q)); // can be reused for texture coords
 			if u >= 0. && u <= 1. && v >= 0. && v <= 1. {
 				Some(HitData {
-					ray: *ray,
 					t,
 					point,
 					normal: self.plane.normal,
 					uv: vec2(u, v),
+					is_front: ray.dir.dot(self.plane.normal) < 0.,
 				})
 			} else {
 				None

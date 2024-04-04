@@ -23,8 +23,8 @@ impl Material for Metal {
 		Some(Ray::new(hit.point, scatter_dir))
 	}
 
-	fn emitted(&self, scattered: Option<(Ray, Vec3)>, _hit: &HitData) -> Vec3 {
-		self.color * scattered.unwrap().1
+	fn emitted(&self, scattered: Option<Vec3>, _hit: &HitData) -> Vec3 {
+		self.color * scattered.unwrap()
 	}
 }
 

@@ -1,6 +1,5 @@
 use std::f64::consts::TAU;
 
-use approx::relative_eq;
 use rand::random;
 use raytracer::{utils::to_static, *};
 
@@ -14,8 +13,7 @@ struct Metal {
 }
 impl Material for Metal {
 	fn scatter(&self, ray: &Ray, hit: &HitData) -> Option<Ray> {
-		let d = ray.dir.dot(hit.normal);
-		if d > 0. {
+		if !hit.is_front {
 			return Some(Ray::new(hit.point, ray.dir));
 		}
 		let reflected_ray = ray.dir.reflect(hit.normal);
@@ -28,9 +26,9 @@ impl Material for Metal {
 		Some(Ray::new(hit.point, scatter_dir))
 	}
 
-	fn emitted(&self, scattered: Option<(Ray, Vec3)>, hit: &HitData) -> Vec3 {
-		let (ray, color) = scattered.unwrap();
-		if relative_eq!(ray.dir, hit.ray.dir) {
+	fn emitted(&self, scattered: Option<Vec3>, hit: &HitData) -> Vec3 {
+		let color = scattered.unwrap();
+		if !hit.is_front {
 			return color;
 		}
 		self.color * color
