@@ -1,6 +1,7 @@
 use crate::geometry::*;
 use crate::image::Image;
 use crate::math_utils::*;
+use crate::utils::to_static;
 use rand::random;
 use std::thread;
 
@@ -27,14 +28,45 @@ pub struct Scene {
 	sky: &'static dyn Sky,
 }
 
-const MIN_T: f64 = 0.001;
-const MAX_T: f64 = 1.0e10;
-
 impl Scene {
-	pub fn new(sky: &'static impl Sky, objects: &'static [SceneObject]) -> Self {
+	pub fn new(sky: &'static dyn Sky, objects: &'static [SceneObject]) -> Self {
 		Self { objects, sky }
 	}
 }
+
+pub struct SceneBuilder {
+	objects: Vec<SceneObject>,
+	sky: Option<&'static dyn Sky>,
+}
+
+pub fn build_scene() -> SceneBuilder {
+	SceneBuilder {
+		objects: vec![],
+		sky: None,
+	}
+}
+
+impl SceneBuilder {
+	pub fn add(mut self, form: &'static dyn Hittable, material: &'static dyn Material) -> Self {
+		self.objects.push(obj(form, material));
+		self
+	}
+
+	pub fn set_sky(mut self, sky: &'static dyn Sky) -> Self {
+		self.sky = Some(sky);
+		self
+	}
+
+	pub fn build(self) -> &'static Scene {
+		to_static(Scene::new(
+			self.sky.unwrap_or(&DEFAULT_SKY),
+			to_static(self.objects),
+		))
+	}
+}
+
+const MIN_T: f64 = 0.001;
+const MAX_T: f64 = 1.0e10;
 
 fn ray_color(ray: &Ray, scene: &Scene, depth: usize) -> Vec3 {
 	if depth == 0 {
@@ -182,4 +214,8 @@ impl Camera {
 
 		imgs.pop().unwrap()
 	}
+}
+
+pub fn make_camera(origin: Vec3, dir: Vec3, near: f64) -> &'static Camera {
+	to_static(Camera::new(origin, dir, near))
 }

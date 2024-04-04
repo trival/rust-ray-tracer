@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use crate::math_utils::*;
+use crate::{math_utils::*, utils::to_static};
 
 #[derive(Clone, Copy)]
 pub struct Ray {
@@ -23,6 +23,7 @@ impl Ray {
 
 #[derive(Clone, Copy)]
 pub struct HitData {
+	pub ray: Ray,
 	pub t: f64,
 	pub point: Vec3,
 	pub normal: Vec3,
@@ -50,7 +51,7 @@ impl Sphere {
 }
 
 pub fn sphere(center: Vec3, radius: f64) -> &'static Sphere {
-	Box::leak(Box::new(Sphere { center, radius }))
+	to_static(Sphere { center, radius })
 }
 
 impl Hittable for Sphere {
@@ -81,6 +82,7 @@ impl Hittable for Sphere {
 			let normal = self.normal_at(point);
 			let uv = Vec2::ZERO; // TODO
 			Some(HitData {
+				ray: *ray,
 				t,
 				point,
 				normal,
@@ -199,6 +201,7 @@ impl Hittable for Quad {
 			let v = self.w.dot(self.u.cross(q)); // can be reused for texture coords
 			if u >= 0. && u <= 1. && v >= 0. && v <= 1. {
 				Some(HitData {
+					ray: *ray,
 					t,
 					point,
 					normal: self.plane.normal,
@@ -213,25 +216,8 @@ impl Hittable for Quad {
 	}
 }
 
-// pub fn new(center: Vec3, width: f64, height: f64, rot: Quat) -> Self {
-// 	let u = rot * Vec3::X * width;
-// 	let v = rot * Vec3::Y * height;
-// 	Self::new_uv(center - u / 2. - v / 2., u, v)
-// }
-
-// pub fn new_wh(width: f64, height: f64) -> Self {
-// 	Self::new(Vec3::ZERO, width, height, Quat::IDENTITY)
-// }
-
-// pub fn new_uv(origin: Vec3, u: Vec3, v: Vec3) -> Self {
-// 	let n = u.cross(v);
-// 	let plane = Plane::new(origin, n);
-// 	let w = n / n.length_squared();
-// 	Self { plane, u, v, w }
-// }
-
 pub fn quad_uv(origin: Vec3, u: Vec3, v: Vec3) -> &'static Quad {
-	Box::leak(Box::new(Quad::new_uv(origin, u, v)))
+	to_static(Quad::new_uv(origin, u, v))
 }
 
 #[derive(Clone, Copy)]
@@ -363,4 +349,8 @@ impl Hittable for Cube {
 		}
 		closest
 	}
+}
+
+pub fn cube(center: Vec3, width: f64, height: f64, depth: f64) -> &'static Cube {
+	to_static(Cube::new(center, width, height, depth))
 }
