@@ -9,13 +9,13 @@ fn rnd() -> f64 {
 
 struct Metal {
 	color: Vec3,
-	shininess: f64,
+	roughness: f64,
 }
 impl Material for Metal {
 	fn scatter(&self, ray: &Ray, hit: &HitData) -> Option<Ray> {
 		let reflected_ray = ray.dir.reflect(hit.normal);
 
-		let mut scatter_dir = reflected_ray + Vec3::random_unit() * self.shininess;
+		let mut scatter_dir = reflected_ray + Vec3::random_unit() * self.roughness;
 		if scatter_dir.is_zero() {
 			scatter_dir = reflected_ray;
 		}
@@ -29,7 +29,10 @@ impl Material for Metal {
 }
 
 fn metal(color: Vec3, shininess: f64) -> &'static Metal {
-	to_static(Metal { color, shininess })
+	to_static(Metal {
+		color,
+		roughness: shininess,
+	})
 }
 
 fn main() {
@@ -60,7 +63,7 @@ fn main() {
 	let img = if threads <= 1 {
 		cam.render(scene, width, height, rays_per_pixel, max_bounces)
 	} else {
-		cam.render_parallel(&scene, width, height, rays_per_pixel, max_bounces, threads)
+		cam.render_parallel(scene, width, height, rays_per_pixel, max_bounces, threads)
 	};
 
 	println!("{}", img.to_ppm());
