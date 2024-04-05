@@ -1,7 +1,7 @@
 use std::f64::consts::TAU;
 
 use rand::random;
-use raytracer::{utils::to_static, *};
+use raytracer::*;
 
 fn rnd() -> f64 {
 	random::<f64>()
@@ -16,16 +16,8 @@ impl Material for Metal {
 		if !hit.is_front {
 			return Some(Ray::new(hit.point, ray.dir));
 		}
-		let reflected_ray = ray.dir.reflect(hit.normal);
-
-		let mut scatter_dir = reflected_ray + Vec3::random_unit() * self.roughness;
-		if scatter_dir.is_zero() {
-			scatter_dir = reflected_ray;
-		}
-
-		Some(Ray::new(hit.point, scatter_dir))
+		Some(metallic_scatter(ray, hit, self.roughness))
 	}
-
 	fn emitted(&self, scattered: Option<Vec3>, hit: &HitData) -> Vec3 {
 		let color = scattered.unwrap();
 		if !hit.is_front {
@@ -34,33 +26,36 @@ impl Material for Metal {
 		self.color * color
 	}
 }
-
-fn metal(color: Vec3, shininess: f64) -> &'static Metal {
-	to_static(Metal {
-		color,
-		roughness: shininess,
-	})
+fn metal(color: Vec3, roughness: f64) -> &'static Metal {
+	to_static(Metal { color, roughness })
 }
 
 fn main() {
-	let mut scene = build_scene();
+	let mut boxes = objects();
+
 	for _ in 0..10 {
 		let w = rnd() * 4. + 2.;
 		let h = rnd() * 4. + 2.;
-		let mut b = Cube::new(Vec3::ZERO, w, h, rnd() + 0.1);
-		b.translate(Vec3::Y * (h / 2.1));
-		b.rotate_about_center(Quat::from_rotation_y(rnd() * TAU));
-		// b.rotate_about_center(Quat::from_rotation_y(0.25 * PI));
-		let col = Vec3::random();
-		scene = scene.add(to_static(b), metal(col, rnd()));
+
+		let b = Cube::new(Vec3::ZERO, w, h, rnd() + 0.1)
+			.translated(Vec3::Y * (h / 2.1))
+			.rotated_about_center(Quat::from_rotation_y(rnd() * TAU))
+			.to_static();
+
+		let mat = metal(Vec3::random(), rnd());
+
+		boxes.add(b, mat);
 	}
-	scene = scene.add(
-		sphere(vec3(0., -200., 0.), 200.),
-		metal(vec3(0.5, 0.5, 0.5), 0.7),
-	);
+
+	let scene = build_scene()
+		.add_all(boxes)
+		.add(
+			sphere(vec3(0., -200., 0.), 200.),
+			metal(vec3(0.5, 0.5, 0.5), 0.7),
+		)
+		.build();
 
 	let cam = make_camera(vec3(0., 5., 10.), vec3(0., -0.3, -1.), 1.2);
-	let scene = scene.build();
 
 	let width = 400;
 	let height = 400;

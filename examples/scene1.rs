@@ -1,14 +1,13 @@
-use raytracer::{utils::to_static, *};
-
-struct Metal {
-	color: Vec3,
-	shininess: f64,
-}
+use raytracer::*;
 
 const LIGHT_POS: Vec3 = vec3(-1., 0., 0.);
 const LIGHT_RADIUS: f64 = 0.5;
 const LIGHT_DISTANCE: f64 = 15.;
 
+struct Metal {
+	color: Vec3,
+	roughness: f64,
+}
 impl Material for Metal {
 	fn scatter(&self, ray: &Ray, hit: &HitData) -> Option<Ray> {
 		let light_point = LIGHT_POS + Vec3::random_unit() * LIGHT_RADIUS;
@@ -17,26 +16,17 @@ impl Material for Metal {
 		let light_strength = 1.0 - (len / LIGHT_DISTANCE);
 
 		if rand::random::<f64>() > 0.25 * light_strength || hit.normal.dot(light_vec) < 0. {
-			let reflected_ray = ray.dir.reflect(hit.normal);
-
-			let mut scatter_dir = reflected_ray + Vec3::random_unit() * self.shininess;
-			if scatter_dir.is_zero() {
-				scatter_dir = reflected_ray;
-			}
-
-			Some(Ray::new(hit.point, scatter_dir))
+			Some(metallic_scatter(ray, hit, self.roughness))
 		} else {
 			Some(Ray::new(hit.point, light_vec))
 		}
 	}
-
 	fn emitted(&self, scattered: Option<Vec3>, _hit: &HitData) -> Vec3 {
 		self.color * scattered.unwrap()
 	}
 }
-
-fn metal(color: Vec3, shininess: f64) -> &'static Metal {
-	to_static(Metal { color, shininess })
+fn metal(color: Vec3, roughness: f64) -> &'static Metal {
+	to_static(Metal { color, roughness })
 }
 
 struct Light {

@@ -23,6 +23,29 @@ pub fn obj(form: &'static dyn Hittable, material: &'static dyn Material) -> Scen
 	SceneObject { form, material }
 }
 
+pub struct SceneObjects {
+	objects: Vec<SceneObject>,
+}
+impl IntoIterator for SceneObjects {
+	type IntoIter = std::vec::IntoIter<SceneObject>;
+	type Item = SceneObject;
+
+	fn into_iter(self) -> Self::IntoIter {
+		self.objects.into_iter()
+	}
+}
+pub fn objects() -> SceneObjects {
+	SceneObjects { objects: vec![] }
+}
+impl SceneObjects {
+	pub fn add(&mut self, form: &'static dyn Hittable, material: &'static dyn Material) {
+		self.objects.push(obj(form, material));
+	}
+	pub fn add_all(&mut self, objects: impl IntoIterator<Item = SceneObject>) {
+		self.objects.extend(objects);
+	}
+}
+
 pub struct Scene {
 	objects: &'static [SceneObject],
 	sky: &'static dyn Sky,
@@ -49,6 +72,11 @@ pub fn build_scene() -> SceneBuilder {
 impl SceneBuilder {
 	pub fn add(mut self, form: &'static dyn Hittable, material: &'static dyn Material) -> Self {
 		self.objects.push(obj(form, material));
+		self
+	}
+
+	pub fn add_all(mut self, objects: impl IntoIterator<Item = SceneObject>) -> Self {
+		self.objects.extend(objects);
 		self
 	}
 

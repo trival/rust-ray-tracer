@@ -163,10 +163,9 @@ impl Quad {
 		self.w = n / n.length_squared();
 	}
 
-	pub fn rotated(&self, rotation_origin: Vec3, rot: Quat) -> Self {
-		let mut quad = self.clone();
-		quad.rotate(rotation_origin, rot);
-		quad
+	pub fn rotated(mut self, rotation_origin: Vec3, rot: Quat) -> Self {
+		self.rotate(rotation_origin, rot);
+		self
 	}
 
 	pub fn rotate_about_center(&mut self, rot: Quat) {
@@ -174,20 +173,22 @@ impl Quad {
 		self.rotate(center, rot);
 	}
 
-	pub fn rotated_about_center(&self, rot: Quat) -> Self {
-		let mut quad = self.clone();
-		quad.rotate_about_center(rot);
-		quad
+	pub fn rotated_about_center(mut self, rot: Quat) -> Self {
+		self.rotate_about_center(rot);
+		self
 	}
 
 	pub fn translate(&mut self, translation: Vec3) {
 		self.plane.origin += translation;
 	}
 
-	pub fn translated(&self, translation: Vec3) -> Self {
-		let mut quad = self.clone();
-		quad.translate(translation);
-		quad
+	pub fn translated(mut self, translation: Vec3) -> Self {
+		self.translate(translation);
+		self
+	}
+
+	pub fn to_static(self) -> &'static Self {
+		to_static(self)
 	}
 }
 
@@ -305,10 +306,9 @@ impl Cube {
 		}
 	}
 
-	pub fn rotated(&self, rotation_origin: Vec3, rot: Quat) -> Self {
-		let mut box_ = self.clone();
-		box_.rotate(rotation_origin, rot);
-		box_
+	pub fn rotated(mut self, rotation_origin: Vec3, rot: Quat) -> Self {
+		self.rotate(rotation_origin, rot);
+		self
 	}
 
 	pub fn rotate_about_center(&mut self, rot: Quat) {
@@ -317,10 +317,9 @@ impl Cube {
 		}
 	}
 
-	pub fn rotated_about_center(&self, rot: Quat) -> Self {
-		let mut box_ = self.clone();
-		box_.rotate_about_center(rot);
-		box_
+	pub fn rotated_about_center(mut self, rot: Quat) -> Self {
+		self.rotate_about_center(rot);
+		self
 	}
 
 	pub fn translate(&mut self, translation: Vec3) {
@@ -330,10 +329,13 @@ impl Cube {
 		self.center += translation;
 	}
 
-	pub fn translated(&self, translation: Vec3) -> Self {
-		let mut box_ = self.clone();
-		box_.translate(translation);
-		box_
+	pub fn translated(mut self, translation: Vec3) -> Self {
+		self.translate(translation);
+		self
+	}
+
+	pub fn to_static(self) -> &'static Self {
+		to_static(self)
 	}
 }
 
