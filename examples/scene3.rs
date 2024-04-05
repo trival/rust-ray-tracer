@@ -16,6 +16,15 @@ impl Material for Metal {
 		if !hit.is_front {
 			return Some(Ray::new(hit.point, ray.dir));
 		}
+
+		if rnd() < self.roughness / 2. {
+			let mut dir = Vec3::random_unit();
+			if hit.normal.dot(dir) < 0. {
+				dir = -dir;
+			}
+			return Some(Ray::new(hit.point, dir));
+		}
+
 		Some(metallic_scatter(ray, hit, self.roughness))
 	}
 	fn emitted(&self, scattered: Option<Vec3>, hit: &HitData) -> Vec3 {

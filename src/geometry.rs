@@ -243,19 +243,19 @@ impl Cube {
 			center + vec3(0., 0., -half_depth),
 			width,
 			height,
-			Quat::from_rotation_z(PI),
+			Quat::from_rotation_y(PI),
 		);
 		let left = Quad::new(
 			center + vec3(-half_width, 0., 0.),
 			depth,
 			height,
-			Quat::from_rotation_y(PI / 2.),
+			Quat::from_rotation_y(-PI / 2.),
 		);
 		let right = Quad::new(
 			center + vec3(half_width, 0., 0.),
 			depth,
 			height,
-			Quat::from_rotation_y(-PI / 2.),
+			Quat::from_rotation_y(PI / 2.),
 		);
 		let top = Quad::new(
 			center + vec3(0., half_height, 0.),
