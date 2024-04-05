@@ -18,11 +18,7 @@ impl Material for Metal {
 		}
 
 		if rnd() < self.roughness / 2. {
-			let mut dir = Vec3::random_unit();
-			if hit.normal.dot(dir) < 0. {
-				dir = -dir;
-			}
-			return Some(Ray::new(hit.point, dir));
+			return Some(Ray::new(hit.point, Vec3::random_in_hemisphere(hit.normal)));
 		}
 
 		Some(metallic_scatter(ray, hit, self.roughness))

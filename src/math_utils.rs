@@ -8,6 +8,7 @@ pub trait Vec3Utils {
 	fn reflect(self, n: Vec3) -> Vec3;
 	fn random() -> Vec3;
 	fn random_in_unit_sphere() -> Vec3;
+	fn random_in_hemisphere(normal: Vec3) -> Vec3;
 	fn random_unit() -> Vec3;
 	fn pow(self, e: f64) -> Vec3;
 }
@@ -36,6 +37,15 @@ impl Vec3Utils for Vec3 {
 
 	fn random_unit() -> Vec3 {
 		Self::random_in_unit_sphere().normalize_or(Vec3::Z)
+	}
+
+	fn random_in_hemisphere(normal: Vec3) -> Vec3 {
+		let in_unit_sphere = Vec3::random_in_unit_sphere();
+		if in_unit_sphere.dot(normal) > 0. {
+			in_unit_sphere
+		} else {
+			-in_unit_sphere
+		}
 	}
 
 	fn pow(self, e: f64) -> Vec3 {
