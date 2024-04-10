@@ -208,6 +208,10 @@ impl Camera {
 		max_bounces: usize,
 		threads: usize,
 	) -> Image {
+		if threads <= 1 {
+			return self.render(scene, img_width, img_height, rays_per_pixel, max_bounces);
+		}
+
 		let mut handles = vec![];
 
 		for _ in 0..threads {

@@ -56,11 +56,7 @@ fn main() {
 	let max_bounces = 100;
 	let threads = 8;
 
-	let img = if threads <= 1 {
-		cam.render(scene, width, height, rays_per_pixel, max_bounces)
-	} else {
-		cam.render_parallel(scene, width, height, rays_per_pixel, max_bounces, threads)
-	};
+	let img = cam.render_parallel(scene, width, height, rays_per_pixel, max_bounces, threads);
 
 	println!("{}", img.to_ppm());
 }
